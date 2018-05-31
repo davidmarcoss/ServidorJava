@@ -73,10 +73,10 @@ public class ThreadHandler extends Thread
                     String pass = (String) dataEntrada.readObject();
 
                     Soci soci = billar.login(nif, pass);
+                    System.out.println("LOGIN: " + nif + " - " + pass);
                     if (soci == null) {
                         dataSalida.writeInt(-1);
                     } else {
-                        System.out.println(soci);
                         billar.refresh(soci);
                         sessionID = generateSessionID(soci.getNif());
                         usersMap.put(sessionID, soci);
@@ -93,6 +93,7 @@ public class ThreadHandler extends Thread
                 }
                 case 2: { // LLISTA DE TORNEJOS OBERTS
                     sessionID = (String) dataEntrada.readObject();
+                    System.out.println("LLISTA DE TORNEJOS OBERTS PER A: " + sessionID);
                     if (usersMap.containsKey(sessionID)) {
                         List<Torneig> tornejos = new ArrayList<Torneig>();
                         billar.getTornejosObertsInscripcio(usersMap.get(sessionID)).forEach((torneig) -> {
@@ -110,6 +111,7 @@ public class ThreadHandler extends Thread
                 }
                 case 3: { // LLISTA TORNEJOS ON PARTICIPO
                     sessionID = (String) dataEntrada.readObject();
+                    System.out.println("LLISTA DE TORNEJOS INSCRITS DE: " + sessionID);
                     if (usersMap.containsKey(sessionID)) {
                         List<Torneig> tornejos = new ArrayList<Torneig>();
                         billar.getTornejosActiusOnParticipo(usersMap.get(sessionID).getId()).forEach((torneig) -> {
@@ -127,6 +129,7 @@ public class ThreadHandler extends Thread
                 }
                 case 4: { // FER INSCRIPCIO
                     sessionID = (String) dataEntrada.readObject();
+                    System.out.println("FENT INSCRIPCIÓ DE: " + sessionID);
                     int torneigId = dataEntrada.readInt();
                     Torneig torneig = billar.getTorneigById(torneigId);
                     if (usersMap.containsKey(sessionID)) {
@@ -177,9 +180,13 @@ public class ThreadHandler extends Thread
                     if (usersMap.containsKey(sessionID)) {
                         Grup grup = billar.getGrupByTorneigOfSoci(torneigId, usersMap.get(sessionID).getId());
                         
-                        List<Partida> partides = new ArrayList<Partida>();
-                        billar.getPartides(grup.getId(), torneigId, usersMap.get(sessionID).getId()).forEach((partida) -> {
-                            partides.add(new Partida(partida));
+                        List<Partida> partides = billar.getPartides(grup.getId(), torneigId, usersMap.get(sessionID).getId());
+                        partides.forEach((partida) -> {
+                            if (partida.getSociA().getNom() == null) {
+                                partida.setSociA(new Soci(usersMap.get(sessionID)));
+                            } else if (partida.getSociB().getNom() == null) {
+                                partida.setSociB(new Soci(usersMap.get(sessionID)));
+                            }
                         });
                         
                         dataSalida.writeInt(1);
@@ -196,7 +203,15 @@ public class ThreadHandler extends Thread
                     Partida partida = (Partida) dataEntrada.readObject();
                     if (usersMap.containsKey(sessionID)) {
                         try {
-                            billar.updatePartida(partida);
+                            Partida partidaUpdated = billar.getPartidaById(partida.getId());
+                            partidaUpdated.setCarambolesA(partida.getCarambolesA());
+                            partidaUpdated.setNumEntradesA(partida.getNumEntradesA());
+                            partidaUpdated.setCarambolesB(partida.getCarambolesB());
+                            partidaUpdated.setNumEntradesB(partida.getNumEntradesB());
+                            partidaUpdated.setEstatPartida(partida.getEstatPartida());
+                            partidaUpdated.setGuanyador(partida.getGuanyador());
+                            partidaUpdated.setModeVictoria(partida.getModeVictoria());
+                            billar.updatePartida(partidaUpdated);
                             billar.commit();
                             dataSalida.writeInt(1);
                             dataSalida.flush();
@@ -243,6 +258,31 @@ public class ThreadHandler extends Thread
                         dataSalida.flush();
                     } else {
                         dataSalida.writeInt(-1);
+                    }
+                    break;
+                }
+                case 9: { // GET ESTADISTIQUES
+                    String sessionId = (String) dataEntrada.readObject();
+                    System.out.println("GET ESTADISTIQUES DE " + sessionId);
+                    if (usersMap.containsKey(sessionId)) {
+                        Soci soci = billar.login(usersMap.get(sessionId).getNif(), usersMap.get(sessionId).getPasswordHash());
+                        if (soci == null) {
+                            dataSalida.writeInt(-1);
+                            dataSalida.flush();
+                        } else {
+                            billar.refresh(soci);
+                            sessionID = generateSessionID(soci.getNif());
+                            usersMap.put(sessionID, soci);
+
+                            dataSalida.writeInt(1);
+                            dataSalida.flush();
+
+                            dataSalida.writeObject(new Soci(soci));
+                            dataSalida.flush();
+                        }
+                    } else {
+                        dataSalida.writeInt(-1);
+                        dataSalida.flush();
                     }
                     break;
                 }

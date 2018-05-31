@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.1" xmlns="http://xmlns.jcp.org/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence http://xmlns.jcp.org/xml/ns/persistence/persistence_2_1.xsd">
+  <persistence-unit name="UP-MySQL" transaction-type="RESOURCE_LOCAL">
+    <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+    <class>info.infomila.billar.models.Modalitat</class>
+    <class>info.infomila.billar.models.EstadisticaModalitat</class>
+    <class>info.infomila.billar.models.Soci</class>
+    <class>info.infomila.billar.models.Torneig</class>
+    <class>info.infomila.billar.models.Grup</class>
+    <class>info.infomila.billar.models.Inscripcio</class>
+    <class>info.infomila.billar.models.Partida</class>
+    <properties>
+      <property name="javax.persistence.jdbc.url" value="jdbc:mysql://127.0.0.1:3306/billars"/>
+      <property name="javax.persistence.jdbc.user" value="root"/>
+      <property name="javax.persistence.jdbc.password" value=""/>
+      <property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/>
+      <!--<property name="javax.persistence.schema-generation.database.action" value="none"/>-->
+      <property name="hibernate.hbm2ddl.auto" value="validate"/>
+      <property name="hibernate.dialect" value="org.hibernate.dialect.MySQL5InnoDBDialect"/>
+      <property name="hibernate.show_sql" value="true"/>
+    </properties>
+  </persistence-unit>
+</persistence>

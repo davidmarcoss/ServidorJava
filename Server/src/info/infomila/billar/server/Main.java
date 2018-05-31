@@ -16,30 +16,32 @@ import java.util.Properties;
 public class Main
 {
     public static Map<String, Soci> usersMap = new HashMap<>();
-    private static int usersCont = 0;
 
     public static void main(String[] args)
     {
         Properties p = new Properties();
         try {
-            p.load(new FileInputStream("propietats.properties"));
+            p.load(new FileInputStream("config.properties"));
         } catch (IOException ex) {
+            System.out.println("Error en llegir el fitxer de propietats: " + ex);
             System.exit(0);
         }
         
         String className = p.getProperty("className");
         if (className == null || className.length() == 0) {
+            System.out.println("Error en llegir la propietat className");
             System.exit(0);
         }
         
-        String nomUnitatPersistencia = p.getProperty("nomUnitatPersistencia");
-        if (nomUnitatPersistencia == null || nomUnitatPersistencia.length() == 0) {
+        String hibernateConfig = p.getProperty("hibernateConfig");
+        if (hibernateConfig == null || hibernateConfig.length() == 0) {
+            System.out.println("Error en llegir la propietat hibernateConfig");
             System.exit(0);
         }
         
         IBillar billar = null;
         try {
-            billar = BillarFactory.getInstance(className, nomUnitatPersistencia);
+            billar = BillarFactory.getInstance(className, hibernateConfig);
         } catch (BillarException ex) {
             System.out.println("Error en crear objecte de capa de persistència");
             System.out.println("Més informació: " + ex.getMessage());
@@ -61,7 +63,6 @@ public class Main
                 Socket newSock = sockServer.accept();
                 System.out.println("Client Acceptat");
                 Thread thread = new ThreadHandler(newSock, billar);
-                usersCont++;
                 thread.start();
             }
 
