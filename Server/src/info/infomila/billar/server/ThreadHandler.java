@@ -79,12 +79,14 @@ public class ThreadHandler extends Thread
                     System.out.println("LOGIN: " + nif + " - " + pass);
                     if (soci == null) {
                         dataSalida.writeInt(-1);
+                        dataSalida.flush();
                     } else {
                         billar.refresh(soci);
                         sessionID = generateSessionID(soci.getNif());
                         usersMap.put(sessionID, soci);
 
                         dataSalida.writeInt(1);
+                        dataSalida.flush();
 
                         dataSalida.writeObject(sessionID);
                         dataSalida.flush();
