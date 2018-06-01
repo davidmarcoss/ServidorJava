@@ -203,6 +203,7 @@ public class ThreadHandler extends Thread
                     Partida partida = (Partida) dataEntrada.readObject();
                     if (usersMap.containsKey(sessionID)) {
                         try {
+                            // Modifiquem i guardem la partida
                             Partida partidaUpdated = billar.getPartidaById(partida.getId());
                             partidaUpdated.setCarambolesA(partida.getCarambolesA());
                             partidaUpdated.setNumEntradesA(partida.getNumEntradesA());
@@ -213,6 +214,10 @@ public class ThreadHandler extends Thread
                             partidaUpdated.setModeVictoria(partida.getModeVictoria());
                             billar.updatePartida(partidaUpdated);
                             billar.commit();
+                            
+                            // TODO: Modifiquem i guardem les estadistiques dels 2 socis de la partida
+                            
+                            
                             dataSalida.writeInt(1);
                             dataSalida.flush();
                         } catch (BillarException ex) {
@@ -262,18 +267,16 @@ public class ThreadHandler extends Thread
                     break;
                 }
                 case 9: { // GET ESTADISTIQUES
-                    String sessionId = (String) dataEntrada.readObject();
-                    System.out.println("GET ESTADISTIQUES DE " + sessionId);
-                    if (usersMap.containsKey(sessionId)) {
-                        Soci soci = billar.login(usersMap.get(sessionId).getNif(), usersMap.get(sessionId).getPasswordHash());
+                    sessionID = (String) dataEntrada.readObject();
+                    System.out.println("GET ESTADISTIQUES DE " + sessionID);
+                    if (usersMap.containsKey(sessionID)) {
+                        Soci soci = billar.getEstadistiques(usersMap.get(sessionID).getNif(), usersMap.get(sessionID).getPasswordHash());
                         if (soci == null) {
                             dataSalida.writeInt(-1);
                             dataSalida.flush();
                         } else {
-                            billar.refresh(soci);
-                            sessionID = generateSessionID(soci.getNif());
-                            usersMap.put(sessionID, soci);
-
+                            //billar.refresh(soci);
+                            
                             dataSalida.writeInt(1);
                             dataSalida.flush();
 
