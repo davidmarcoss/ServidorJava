@@ -3,7 +3,9 @@ package info.infomila.billar.server;
 import info.infomila.billar.ipersistence.BillarException;
 import info.infomila.billar.ipersistence.IBillar;
 import info.infomila.billar.models.Classificacio;
+import info.infomila.billar.models.EstadisticaModalitat;
 import info.infomila.billar.models.Grup;
+import info.infomila.billar.models.Modalitat;
 import info.infomila.billar.models.Partida;
 import info.infomila.billar.models.Soci;
 import info.infomila.billar.models.Torneig;
@@ -15,6 +17,7 @@ import java.net.Socket;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -200,6 +203,8 @@ public class ThreadHandler extends Thread
                 }
                 case 7: { // MODIFICAR PARTIDA
                     sessionID = (String) dataEntrada.readObject();
+                    int sociAId = dataEntrada.readInt();
+                    int sociBId = dataEntrada.readInt();
                     Partida partida = (Partida) dataEntrada.readObject();
                     if (usersMap.containsKey(sessionID)) {
                         try {
@@ -212,11 +217,11 @@ public class ThreadHandler extends Thread
                             partidaUpdated.setEstatPartida(partida.getEstatPartida());
                             partidaUpdated.setGuanyador(partida.getGuanyador());
                             partidaUpdated.setModeVictoria(partida.getModeVictoria());
+                            partida.setDataRealitzacio(new Date());
                             billar.updatePartida(partidaUpdated);
                             billar.commit();
                             
-                            // TODO: Modifiquem i guardem les estadistiques dels 2 socis de la partida
-                            
+                            ActualitzarEstadistiques(sociAId, sociBId, partidaUpdated);
                             
                             dataSalida.writeInt(1);
                             dataSalida.flush();
@@ -291,12 +296,10 @@ public class ThreadHandler extends Thread
                 }
             }
 
-        } catch (IOException ex) {
-            Logger.getLogger(ThreadHandler.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ClassNotFoundException ex) {
-            Logger.getLogger(ThreadHandler.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException | ClassNotFoundException ex) {
+            System.out.println("Error en el servidor.");
         } catch (BillarException ex) {
-            Logger.getLogger(ThreadHandler.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println("Error al tractar la petició del client: " + sessionID);
         }
     }
 
@@ -333,5 +336,66 @@ public class ThreadHandler extends Thread
         }
 
         return hash;
+    }
+    
+    private void ActualitzarEstadistiques(int sociAId, int sociBId, Partida partida) {
+        try {
+            Soci sociA = billar.getSociById(sociAId);
+            Soci sociB = billar.getSociById(sociBId);
+            
+            Modalitat modalitat = partida.getTorneig().getModalitat();
+            
+            Iterator estadistiquesA = sociA.iteEstadistiques();
+            EstadisticaModalitat emA = null;
+            while(estadistiquesA.hasNext()) {
+                EstadisticaModalitat em = (EstadisticaModalitat) estadistiquesA.next();
+                if (em.getModalitat().equals(modalitat)) {
+                    emA = (EstadisticaModalitat) em;
+                }
+            }
+            
+            if (emA == null) {
+                if (partida.getNumEntradesA() > 0) {
+                    double coeficientBase  = partida.getCarambolesA() / partida.getNumEntradesA();
+                    emA = new EstadisticaModalitat(sociA, modalitat, coeficientBase, partida.getCarambolesA(), partida.getNumEntradesA());
+                    sociA.addEstadistica(emA);
+                }
+            } else {
+                emA.setCarambolesTemporadaActual(emA.getCarambolesTemporadaActual() + partida.getCarambolesA());
+                emA.setEntradesTemporadaActual(emA.getEntradesTemporadaActual() + partida.getNumEntradesA());
+                double coeficientBase = emA.getCarambolesTemporadaActual() / emA.getEntradesTemporadaActual();
+                emA.setCoeficientBase(coeficientBase);
+            }
+            
+            billar.updateSoci(sociA);
+            
+            Iterator estadistiquesB = sociB.iteEstadistiques();
+            EstadisticaModalitat emB = null;
+            while(estadistiquesB.hasNext()) {
+                EstadisticaModalitat em = (EstadisticaModalitat) estadistiquesB.next();
+                if (em.getModalitat().equals(modalitat)) {
+                    emB = (EstadisticaModalitat) em;
+                }
+            }
+            
+            if (emB == null) {
+                if (partida.getNumEntradesB() > 0) {
+                    double coeficientBase  = partida.getCarambolesB() / partida.getNumEntradesB();
+                    emB = new EstadisticaModalitat(sociB, modalitat, coeficientBase, partida.getCarambolesB(), partida.getNumEntradesB());
+                    sociA.addEstadistica(emA);
+                }
+            } else {
+                emB.setCarambolesTemporadaActual(emB.getCarambolesTemporadaActual() + partida.getCarambolesB());
+                emB.setEntradesTemporadaActual(emB.getEntradesTemporadaActual() + partida.getNumEntradesB());
+                double coeficientBase = emB.getCarambolesTemporadaActual() / emB.getEntradesTemporadaActual();
+                emB.setCoeficientBase(coeficientBase);
+            }
+            
+            billar.updateSoci(sociB);
+            
+            
+        } catch (BillarException ex) {
+            System.out.println("Error al actualitzar estadistiques de l'usuari " + sessionID);
+        }
     }
 }
